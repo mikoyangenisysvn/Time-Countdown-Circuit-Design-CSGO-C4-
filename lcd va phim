@@ -1,0 +1,93 @@
+#include <ShiftRegister74HC595.h>
+#include <LiquidCrystalSerial.h>
+
+// Khởi tạo IC 74HC595 (DATA, CLOCK, LATCH)
+const uint8_t dataPin = 3;  // DATA
+const uint8_t clockPin = 0; // CLOCK
+const uint8_t latchPin = 4; // LATCH
+
+ShiftRegister74HC595<1> sr(dataPin, clockPin, latchPin); // 1 IC 74HC595
+LiquidCrystalSerial lcd((uint8_t)0, (uint8_t)1, (uint8_t)2); // LCD 16x2
+
+// Mảng lưu mã phím bàn phím 4x3
+char keypad[4][3] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+
+// Cột của bàn phím
+const int colPins[3] = {5, 6, 7}; // 3 cột
+
+// Biến quản lý debounce
+unsigned long lastPressTime = 0;
+unsigned long debounceDelay = 200; // 200 ms cho debounce
+
+// Biến lưu giá trị phím nhấn
+char lastKey = ' ';
+char previous_lastKey = ' ';
+
+void setup() {
+  lcd.begin(16, 2);
+  lcd.print("hello, world!");
+  delay(2000); // Hiển thị "hello, world!" trong 2 giây
+  lcd.clear();
+  lcd.print("Press Key");
+
+  // Cấu hình cột là OUTPUT
+  for (int i = 0; i < 3; i++) {
+    pinMode(colPins[i], INPUT);
+    digitalWrite(colPins[i], HIGH);
+  }
+}
+
+void loop() {
+  quetPhim(); // Quét phím
+  if (previous_lastKey != lastKey && lastKey != ' ') {
+    displayKey(); // Hiển thị phím nhấn trên LCD
+    previous_lastKey = lastKey;
+  }
+  //ledOn();
+}
+
+char quetPhim() {
+  for (int row = 0; row < 4; row++) { // Quét 4 hàng
+    // Tắt toàn bộ cột để tránh xung đột tín hiệu
+    sr.set(0, HIGH); 
+    sr.set(1, HIGH);
+    sr.set(2, HIGH);
+    sr.set(3, HIGH);
+    delay(1); // Đợi tín hiệu ổn định
+
+    // Kích hoạt hang hiện tại
+    sr.set(row, LOW);
+
+    // Đọc cot
+    for (int col = 0; col < 3; col++) { 
+      if (digitalRead(colPins[col]) == LOW) {
+        // Kiểm tra thời gian debounce
+        if (millis() - lastPressTime > debounceDelay) {
+          lastPressTime = millis();  // Cập nhật thời gian nhấn phím
+
+          // Lưu giá trị phím nhấn
+          return lastKey = keypad[row][col];
+        }
+      }
+    }
+  }
+  return lastKey = ' ';
+}
+// Hàm hiển thị phím nhấn trên LCD
+void displayKey() {
+  lcd.clear();             // Xóa toàn bộ LCD
+  lcd.setCursor(0, 0);     // Đặt con trỏ LCD ở dòng 1
+  lcd.print("Key: ");      // Hiển thị nhãn
+  lcd.print(lastKey);      // Hiển thị phím nhấn
+}
+
+void ledOn()
+{
+  if(lastKey == '1')
+  sr.set(4,HIGH);
+}

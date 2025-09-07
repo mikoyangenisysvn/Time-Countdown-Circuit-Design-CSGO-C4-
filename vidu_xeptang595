@@ -1,0 +1,21 @@
+int dataPin = 1;   // DS của IC 74HC595
+int latchPin = 2;  // ST_CP của IC 74HC595
+int clockPin = 0;  // SH_CP của IC 74HC595
+
+void setup() {
+  pinMode(dataPin, OUTPUT);
+  pinMode(latchPin, OUTPUT);
+  pinMode(clockPin, OUTPUT);
+}
+
+void loop() {
+  shiftOut(dataPin, clockPin, MSBFIRST, 0xFF); // Gửi giá trị 11111111 (tất cả LED sáng)
+  digitalWrite(latchPin, HIGH);  // Latch dữ liệu vào các chân Q
+  digitalWrite(latchPin, LOW);
+  delay(1000);
+  
+  shiftOut(dataPin, clockPin, MSBFIRST, 0x00); // Gửi giá trị 00000000 (tất cả LED tắt)
+  digitalWrite(latchPin, HIGH);
+  digitalWrite(latchPin, LOW);
+  delay(1000);
+}

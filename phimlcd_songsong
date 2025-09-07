@@ -1,0 +1,89 @@
+#include <ShiftRegister74HC595.h>
+#include <LiquidCrystalSerial.h>
+
+// Khởi tạo IC 74HC595 (DATA, CLOCK, LATCH)
+const uint8_t dataPin = 3;
+const uint8_t clockPin = 0;
+const uint8_t latchPin = 4;
+
+ShiftRegister74HC595<1> sr(dataPin, clockPin, latchPin);
+LiquidCrystalSerial lcd((uint8_t)0, (uint8_t)1, (uint8_t)2);
+
+// Mảng mã phím bàn phím
+char keypad[4][3] = {
+    {'1', '2', '3'},
+    {'4', '5', '6'},
+    {'7', '8', '9'},
+    {'*', '0', '#'}
+};
+
+// Cột của bàn phím
+const int colPins[3] = {5, 6, 7};
+
+// Biến debounce
+unsigned long lastPressTime = 0;
+const unsigned long debounceDelay = 50;
+
+char lastKey = ' ';
+char previous_lastKey = ' ';
+
+void setup() {
+    lcd.begin(16, 2);
+    lcd.print("hello, world!");
+    delay(2000);
+    lcd.clear();
+    lcd.print("Press Key");
+
+    // Cấu hình cột là INPUT_PULLUP
+    for (int i = 0; i < 3; i++) {
+        pinMode(colPins[i], INPUT_PULLUP);
+    }
+}
+
+void loop() {
+    quetPhim();
+    if (previous_lastKey != lastKey && lastKey != ' ') {
+        displayKey();
+        previous_lastKey = lastKey;
+    }
+    ledOn();
+}
+
+char quetPhim() {
+    for (int row = 0; row < 4; row++) {
+        // Tắt tất cả hàng
+        for (int i = 0; i < 4; i++) {
+            sr.set(i, HIGH);
+        }
+        delay(1);
+
+        // Kích hoạt hàng hiện tại
+        sr.set(row, LOW);
+
+        // Đọc tín hiệu từ các cột
+        for (int col = 0; col < 3; col++) {
+            if (digitalRead(colPins[col]) == LOW) {
+                if (millis() - lastPressTime > debounceDelay) {
+                    lastPressTime = millis();
+                    return lastKey = keypad[row][col];
+                }
+            }
+        }
+    }
+    return lastKey = ' ';
+}
+
+void displayKey() {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Key: ");
+    lcd.print(lastKey);
+}
+
+void ledOn() {
+    if (lastKey == '1') {
+        sr.set(4, LOW); // Bật LED
+    } else {
+        sr.set(4, HIGH); // Tắt LED
+    }
+}

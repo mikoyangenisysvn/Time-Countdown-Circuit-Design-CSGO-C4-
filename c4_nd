@@ -1,0 +1,154 @@
+#include <LiquidCrystalSerial.h>
+#include <Keypad.h>
+
+// Chân kết nối shift register
+#define SH_CP 1  // Chân SH_CP của shift register
+#define DS    0  // Chân DS của shift register
+#define ST_CP 2  // Chân ST_CP của shift register
+
+// Khởi tạo LCD với shift register
+LiquidCrystalSerial lcd(SH_CP, DS, ST_CP);
+
+// Cấu hình keypad 4x3
+const byte ROWS = 4;  // Số hàng của keypad
+const byte COLS = 3;  // Số cột của keypad
+char keys[ROWS][COLS] = {  // Bố trí phím trên keypad
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+byte rowPins[ROWS] = {3, 4, 5, 6};  // Chân hàng kết nối với vi điều khiển
+byte colPins[COLS] = {7, 8, 9};     // Chân cột kết nối với vi điều khiển
+
+// Khởi tạo đối tượng keypad
+Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
+
+// Biến lưu trữ dãy số người dùng nhập
+String inputCode = "";      // Mã thời gian nhập
+String password = "7355608";  // Mật khẩu mặc định
+String inputPassword = "";  // Mật khẩu người dùng nhập
+int totalSeconds = 0;      // Tổng số giây
+int minutes = 0;           // Phút
+int seconds = 0;           // Giây
+bool timeEntered = false;  // Trạng thái nhập thời gian
+bool passwordEntered = false;  // Trạng thái nhập mật khẩu
+bool timerRunning = false;  // Trạng thái đếm ngược
+
+// Khởi tạo LCD trong setup
+void setup() {
+  lcd.begin(16, 2);  // Cấu hình LCD 16x2
+  lcd.print("Nhap thoi gian:");  // Hiển thị thông báo nhập thời gian
+}
+
+// Vòng lặp chính
+void loop() {
+  char key = keypad.getKey();  // Lấy phím nhấn
+
+  // Nếu thời gian chưa được nhập
+  if (!timeEntered) {
+    if (key) {
+      if (key == '#') {  // Khi nhấn '#', xác nhận thời gian
+        if (inputCode.length() > 0) {
+          totalSeconds = inputCode.toInt();  // Chuyển mã nhập thành giây
+          minutes = totalSeconds / 60;      // Tính phút
+          seconds = totalSeconds % 60;      // Tính giây
+
+          lcd.clear();
+          lcd.print("Time: ");
+          lcd.print(minutes);  // Hiển thị phút
+          lcd.print(":");
+          if (seconds < 10) lcd.print("0");  // Đảm bảo giây có hai chữ số
+          lcd.print(seconds);
+          delay(1000);
+
+          timeEntered = true;  // Đánh dấu đã nhập thời gian
+          inputCode = "";  // Xóa mã nhập
+          lcd.clear();
+          lcd.print("Nhap mat khau:");  // Hiển thị yêu cầu nhập mật khẩu
+        }
+      } else if (key == '*') {  // Nhấn '*' để xóa ký tự cuối
+        if (inputCode.length() > 0) {
+          inputCode.remove(inputCode.length() - 1);
+        }
+        lcd.clear();
+        lcd.print("Nhap thoi gian:");
+        lcd.setCursor(0, 1);
+        lcd.print(inputCode);
+      } else {  // Nhập thêm ký tự vào
+        if (inputCode.length() < 4) {  // Giới hạn 4 ký tự
+          inputCode += key;
+          lcd.clear();
+          lcd.print("Nhap thoi gian:");
+          lcd.setCursor(0, 1);
+          lcd.print(inputCode);
+        }
+      }
+    }
+  } 
+  // Nếu mật khẩu chưa được nhập
+  else if (!passwordEntered) {
+    if (key) {
+      if (key == '#') {  // Xác nhận mật khẩu
+        inputPassword.trim();
+        if (inputPassword == password) {  // Kiểm tra mật khẩu đúng
+          passwordEntered = true;  // Đánh dấu đã nhập đúng mật khẩu
+          inputPassword = "";  // Xóa mật khẩu
+          lcd.clear();
+          lcd.print("Dem nguoc bat dau!");  // Hiển thị thông báo đếm ngược
+          delay(1000);
+          timerRunning = true;  // Bắt đầu đếm ngược
+        } else {  // Mật khẩu sai
+          inputPassword = "";  // Xóa mật khẩu
+          lcd.clear();
+          lcd.print("Sai mat khau!");  // Thông báo mật khẩu sai
+          delay(1000);
+          lcd.clear();
+          lcd.print("Nhap mat khau:");  // Yêu cầu nhập lại mật khẩu
+        }
+      } else if (key == '*') {  // Nhấn '*' để xóa ký tự cuối của mật khẩu
+        if (inputPassword.length() > 0) {
+          inputPassword.remove(inputPassword.length() - 1);
+        }
+        lcd.clear();
+        lcd.print("Nhap mat khau:");
+        lcd.setCursor(0, 1);
+        lcd.print(inputPassword);
+      } else {  // Nhập thêm ký tự vào mật khẩu
+        if (inputPassword.length() < 7) {  // Giới hạn 7 ký tự
+          inputPassword += key;
+          lcd.clear();
+          lcd.print("Nhap mat khau:");
+          lcd.setCursor(0, 1);
+          lcd.print(inputPassword);
+        }
+      }
+    }
+  } 
+  // Nếu đang đếm ngược
+  else if (timerRunning) {
+    if (seconds == 0 && minutes == 0) {
+      lcd.clear();
+      lcd.print("Time's up!");  // Hiển thị thông báo hết giờ
+      delay(1000);
+      timerRunning = false;  // Dừng đếm ngược
+    } else {
+      if (seconds == 0) {  // Nếu giây = 0, giảm phút xuống 1
+        if (minutes > 0) {
+          minutes--;
+          seconds = 59;
+        }
+      } else {
+        seconds--;  // Giảm giây xuống 1
+      }
+
+      lcd.clear();
+      lcd.print("Thoi gian: ");
+      lcd.print(minutes);  // Hiển thị phút còn lại
+      lcd.print(":");
+      if (seconds < 10) lcd.print("0");  // Đảm bảo giây có hai chữ số
+      lcd.print(seconds);
+      delay(1000);  // Đếm từng giây
+    }
+  }
+}

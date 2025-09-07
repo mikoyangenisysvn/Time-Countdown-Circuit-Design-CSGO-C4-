@@ -1,0 +1,99 @@
+#include <ShiftRegister74HC595.h>
+//#include <LiquidCrystalSerial.h>
+
+// Khởi tạo IC 74HC595 (DATA, CLOCK, LATCH)
+const int dataPin = 2;  // DATA
+const int clockPin = 3; // CLOCK
+const int latchPin = 4; // LATCH
+
+ShiftRegister74HC595<2> sr(dataPin, clockPin, latchPin); // 2 IC 74HC595
+
+// Mảng lưu mã phím bàn phím 4x3
+char keypad[4][3] = {
+  {'1', '2', '3'},
+  {'4', '5', '6'},
+  {'7', '8', '9'},
+  {'*', '0', '#'}
+};
+
+// Hàng của bàn phím
+const int rowPins[4] = {5, 6, 7, 8}; // Hàng (4 hàng)
+
+// Trạng thái các cột
+uint8_t colState[] = {0b0001, 0b0010, 0b0100}; // Chỉ 3 cột
+
+// LED kết nối Q4 (bit số 4 trong thanh ghi của IC thứ nhất)
+const int ledBit = 4;
+
+void setup() {
+  Serial.begin(9600);
+
+  // Cấu hình hàng là INPUT_PULLUP
+  for (int i = 0; i < 4; i++) { // Có 4 hàng
+    pinMode(rowPins[i], INPUT_PULLUP);
+  }
+}
+
+void loop() {
+  /*for (int col = 0; col < 3; col++) { // Quét 3 cột
+    // Tắt toàn bộ cột để tránh xung đột tín hiệu
+    sr.setAll(0b0000);
+    delay(1); // Đợi tín hiệu ổn định
+
+    // Kích hoạt cột hiện tại
+    sr.setAll(colState[col]);
+
+    // Đọc hàng
+    for (int row = 0; row < 4; row++) { // Quét 4 hàng
+      if (digitalRead(rowPins[row]) == LOW) {
+        Serial.print("Key Pressed: ");
+        Serial.println(keypad[row][col]);
+
+        // Bật LED trên IC thứ nhất (Q4) cho bất kỳ phím nào
+        sr.set(ledBit, HIGH);
+        delay(200); // Chống rung phím
+        sr.set(ledBit, LOW);
+
+        // Bật LED trên IC thứ hai (Q0) khi nhấn phím '#'
+        //if (keypad[row][col] == '#') {
+          sr.set(8, HIGH); // Bật LED (Q0 trên IC thứ hai)
+          delay(200);
+          sr.set(8, LOW);  // Tắt LED
+        //}
+      }
+    }
+  }*/
+  quetphim();
+}
+
+void quetphim()
+{
+  for (int col = 0; col < 3; col++) { // Quét 3 cột
+    // Tắt toàn bộ cột để tránh xung đột tín hiệu
+    sr.setAll(0b0000);
+    delay(1); // Đợi tín hiệu ổn định
+
+    // Kích hoạt cột hiện tại
+    sr.setAll(colState[col]);
+
+    // Đọc hàng
+    for (int row = 0; row < 4; row++) { // Quét 4 hàng
+      if (digitalRead(rowPins[row]) == LOW) {
+        Serial.print("Key Pressed: ");
+        Serial.println(keypad[row][col]);
+
+        // Bật LED trên IC thứ nhất (Q4) cho bất kỳ phím nào
+        sr.set(ledBit, HIGH);
+        delay(200); // Chống rung phím
+        sr.set(ledBit, LOW);
+
+        // Bật LED trên IC thứ hai (Q0) khi nhấn phím '#'
+        //if (keypad[row][col] == '#') {
+          sr.set(8, HIGH); // Bật LED (Q0 trên IC thứ hai)
+          delay(200);
+          sr.set(8, LOW);  // Tắt LED
+        //}
+      }
+    }
+  }
+}
